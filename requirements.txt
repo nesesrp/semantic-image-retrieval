@@ -3,3 +3,5 @@ transformers
 faiss-cpu==1.14.3
 pillow
 matplotlib
+fastapi
+uvicorn[standart]
