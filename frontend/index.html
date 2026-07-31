@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <title>Flickr8k CLIP Search</title>
+    <link rel="stylesheet" href="style.css">
+  </head>
+<body class="page">
+
+  <div class="search-row">
+    <input
+      id="q"
+      type="text"
+      placeholder="Search..."
+      class="search-input"
+    >
+    <button
+      id="search-btn"
+      class="btn btn-primary"
+    >
+      Search
+    </button>
+
+    <input id="imageFile" type="file" accept="image/*" class="hidden">
+    <button
+      id="image-search-btn"
+      class="btn btn-secondary"
+    >
+      Search by Image
+    </button>
+    <div id="timing" class="timing-badge"></div>
+  </div>
+
+  <div class="results">
+    <div class="results-row">
+      <img id="result-0" class="result-img">
+      <img id="result-1" class="result-img">
+      <img id="result-2" class="result-img">
+    </div>
+    <div class="results-row">
+      <img id="result-3" class="result-img">
+      <img id="result-4" class="result-img">
+      <img id="result-5" class="result-img">
+    </div>
+  </div>
+
+  <div id="modal" class="modal hidden">
+    <img id="modalImg" class="modal-img">
+
+    <div class="modal-close-wrap">
+
+      <button
+        id="modal-close-btn"
+        class="modal-close-btn"
+      >
+        &times;
+      </button>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

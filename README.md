@@ -35,3 +35,35 @@ python3 src/search.py
 - `outputs/faiss.index` — FAISS index used for search
 - `outputs/dataset_check.png` — dataset preview grid
 - `outputs/search_result.png` — best match for the last search query
+
+## API server
+
+```bash
+uvicorn src.api:app --reload
+```
+
+Endpoints:
+
+- `POST /search` — JSON body `{ "query": "a dog running", "k": 5 }`, returns the top `k` matches
+- `GET /search-image?q=...` — text query via query string, returns the top 6 matches
+- `POST /search-by-image` — multipart upload (`file`), returns the top 6 visually similar images
+- `GET /download/{filename}` — download a source image
+- `GET /images/{filename}` — static image files
+
+Example:
+
+```bash
+curl "http://localhost:8000/search-image?q=a cat sitting on a chair"
+```
+
+## Frontend
+
+A small vanilla JS + Tailwind CSS UI lives in `frontend/` for text and image search against the API.
+
+```bash
+cd frontend
+npm install
+npm run build   # or `npm run watch` while developing
+```
+
+Then open `frontend/index.html` in a browser (with the API server running on `localhost:8000`).

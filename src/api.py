@@ -1,13 +1,15 @@
 from pathlib import Path
 import os
 import time
+import io
 from contextlib import asynccontextmanager
 
 import torch
 import faiss
-from fastapi import FastAPI, Request, Query
+from PIL import Image
+from fastapi import FastAPI, Request, Query, UploadFile, File
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -16,6 +18,7 @@ from .model_loader import load_model
 INDEX_PATH = "outputs/faiss.index"
 EMBEDDINGS_PATH = "outputs/embeddings.pt"
 IMAGES_DIR = Path.home() / "Desktop" / "archive" / "Images"
+BASE_URL = "http://127.0.0.1:8000"
 
 
 @asynccontextmanager
@@ -68,7 +71,20 @@ class SearchResponse(BaseModel):
     results: list[SearchResult]
 
 
+def get_state(request: Request):
+    state = request.app.state
+    return state.model, state.processor, state.index, state.filenames
+
+
 app = FastAPI(lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/images", StaticFiles(directory=IMAGES_DIR), name="images")
 
 
@@ -77,12 +93,14 @@ def root():
     return {"status": "ok"}
 
 
+@app.get("/download/{filename}")
+def download_image(filename: str):
+    return FileResponse(IMAGES_DIR / filename, filename=filename)
+
+
 @app.post("/search", response_model=SearchResponse)
 def search(payload: SearchRequest, request: Request):
-    model = request.app.state.model
-    processor = request.app.state.processor
-    index = request.app.state.index
-    filenames = request.app.state.filenames
+    model, processor, index, filenames = get_state(request)
 
     text_inputs = processor(text=[payload.query], return_tensors="pt", padding=True)
     with torch.no_grad():
@@ -96,7 +114,7 @@ def search(payload: SearchRequest, request: Request):
         SearchResult(
             filename=filenames[idx],
             score=float(score),
-            image_url=f"/images/{filenames[idx]}",
+            image_url=f"{BASE_URL}/images/{filenames[idx]}",
         )
         for idx, score in zip(indices[0], scores[0])
     ]
@@ -106,10 +124,7 @@ def search(payload: SearchRequest, request: Request):
 
 @app.get("/search-image")
 def search_image(request: Request, q: str = Query(..., min_length=1)):
-    model = request.app.state.model
-    processor = request.app.state.processor
-    index = request.app.state.index
-    filenames = request.app.state.filenames
+    model, processor, index, filenames = get_state(request)
 
     text_inputs = processor(text=[q], return_tensors="pt", padding=True)
     with torch.no_grad():
@@ -117,7 +132,44 @@ def search_image(request: Request, q: str = Query(..., min_length=1)):
         text_features = text_features / text_features.norm(dim=1, keepdim=True)
         text_features = text_features.numpy().astype("float32")
 
-    scores, indices = index.search(text_features, 1)
+    scores, indices = index.search(text_features, 6)
 
-    best_filename = filenames[indices[0][0]]
-    return RedirectResponse(url=f"/images/{best_filename}")
+    results = [
+        SearchResult(
+            filename=filenames[idx],
+            score=float(score),
+            image_url=f"{BASE_URL}/images/{filenames[idx]}",
+        )
+        for idx, score in zip(indices[0], scores[0])
+    ]
+
+    return SearchResponse(results=results)
+
+
+@app.post("/search-by-image", response_model=SearchResponse)
+async def search_by_image(request: Request, file: UploadFile = File(...)):
+    model, processor, index, filenames = get_state(request)
+
+    image_bytes = await file.read()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    image_inputs = processor(images=image, return_tensors="pt")
+    with torch.no_grad():
+        image_features = model.get_image_features(**image_inputs)
+        image_features = image_features / image_features.norm(dim=1, keepdim=True)
+        image_features = image_features.numpy().astype("float32")
+
+    scores, indices = index.search(image_features, 6)
+
+    results = [
+        SearchResult(
+            filename=filenames[idx],
+            score=float(score),
+            image_url=f"{BASE_URL}/images/{filenames[idx]}",
+        )
+        for idx, score in zip(indices[0], scores[0])
+    ]
+
+    return SearchResponse(results=results)
+
+ 
