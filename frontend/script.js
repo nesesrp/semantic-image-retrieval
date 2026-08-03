@@ -1,12 +1,15 @@
 function renderResults(results) {
   for (let i = 0; i < 6; i++) {
     const img = document.getElementById(`result-${i}`);
+    const score = document.getElementById(`score-${i}`);
     if (results[i]) {
       img.src = results[i].image_url;
       img.onclick = () => openModal(results[i].image_url);
+      score.textContent = results[i].score.toFixed(3);
     } else {
       img.src = "";
       img.onclick = null;
+      score.textContent = "";
     }
   }
 }
