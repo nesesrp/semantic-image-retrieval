@@ -49,6 +49,7 @@ async def lifespan(app: FastAPI):
     app.state.index = index
     app.state.filenames = filenames
     app.state.moondream = moondream
+    app.state.embeddings = embeddings
 
     print(f"Ready ({time.perf_counter() - start:.2f}s)")
 
@@ -59,6 +60,7 @@ async def lifespan(app: FastAPI):
     app.state.index = None
     app.state.filenames = None
     app.state.moondream = None
+    app.state.embeddings = None
 
 
 class SearchRequest(BaseModel):
@@ -176,17 +178,19 @@ def search_image(request: Request, q: str = Query(..., min_length=1)):
 @app.post("/search-by-image", response_model=SearchResponse)
 async def search_by_image(request: Request, file: UploadFile = File(...)):
     model, processor, index, filenames = get_state(request)
+    state = request.app.state
 
     image_bytes = await file.read()
     image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
 
     image_inputs = processor(images=image, return_tensors="pt")
     with torch.no_grad():
-        image_features = model.get_image_features(**image_inputs)
-        image_features = image_features / image_features.norm(dim=1, keepdim=True)
-        image_features = image_features.numpy().astype("float32")
+        raw_features = model.get_image_features(**image_inputs)  # (1, dim), unnormalized
 
-    scores, indices = index.search(image_features, 6)
+    normalized = raw_features / raw_features.norm(dim=1, keepdim=True)
+    query_vec = normalized.numpy().astype("float32")
+
+    scores, indices = index.search(query_vec, 6)
 
     results = [
         SearchResult(
@@ -196,6 +200,17 @@ async def search_by_image(request: Request, file: UploadFile = File(...)):
         )
         for idx, score in zip(indices[0], scores[0])
     ]
+
+    # add to uploaded image to the dataset
+    new_filename = f"upload_{uuid.uuid4().hex}_{file.filename}"
+    image.save(IMAGES_DIR / new_filename)
+
+    state.embeddings[new_filename] = raw_features[0].detach().clone()
+    state.filenames.append(new_filename)
+    index.add(query_vec)
+
+    torch.save(state.embeddings, EMBEDDINGS_PATH)
+    faiss.write_index(index, INDEX_PATH)
 
     return SearchResponse(results=results)
 

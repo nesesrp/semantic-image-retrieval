@@ -27,6 +27,8 @@ flowchart LR
 
 - Text → image search (`"a dog running on the beach"` → matching photos)
 - Image → image search (upload a photo, find visually similar ones)
+- Uploaded images are added to the dataset — embedded, saved to disk, and indexed so future searches can match against them too
+- Image captioning & visual Q&A powered by [Moondream2](https://huggingface.co/vikhyatk/moondream2) — describe any result image or ask a question about it
 - Similarity score shown under every result
 - FAISS-backed nearest neighbor search for fast lookups
 - Minimal FastAPI backend + vanilla JS frontend, no heavy framework
@@ -44,12 +46,13 @@ flickr8k-clip/
 │   └── style.css
 └── src/
     ├── model_loader.py      # loads CLIP model + processor (cached)
+    ├── moondream_loader.py  # loads Moondream2 VLM (cached) for captioning + Q&A
     ├── embeddings.py        # encodes all dataset images -> outputs/embeddings.pt
     ├── search.py             # CLI: build/load FAISS index, run a text search
     ├── check_dataset.py     # preview grid of random images + captions
     ├── inspect_embeddings.py # inspect saved embedding tensors
     ├── utils.py              # cosine similarity helper
-    └── api.py                # FastAPI server (search endpoints)
+    └── api.py                # FastAPI server (search + captioning endpoints)
 ```
 
 ## Setup
@@ -108,17 +111,21 @@ Saved: outputs/search_result.png
 uvicorn src.api:app --reload
 ```
 
-On startup the server loads the CLIP model, the cached embeddings, and the FAISS index once, and keeps them in memory for all requests.
+On startup the server loads the CLIP model, the Moondream2 model, the cached embeddings, and the FAISS index once, and keeps them in memory for all requests.
 
 | Endpoint | Method | Description |
 |---|---|---|
 | `/search` | `POST` | JSON body `{ "query": "a dog running", "k": 5 }` → top `k` matches |
 | `/search-image?q=...` | `GET` | text query via query string → top 6 matches |
 | `/search-by-image` | `POST` | multipart upload (`file`) → top 6 visually similar images |
+| `/describe/{filename}` | `GET` | Moondream2 short caption for an image |
+| `/ask/{filename}?q=...` | `GET` | Moondream2 visual Q&A — ask a question about an image |
 | `/download/{filename}` | `GET` | download a source image |
 | `/images/{filename}` | `GET` | static image files |
 
-Each result includes a `filename`, a cosine similarity `score`, and an `image_url` ready to render.
+Each search result includes a `filename`, a cosine similarity `score`, and an `image_url` ready to render.
+
+`/search-by-image` also grows the dataset: the uploaded image is saved into `IMAGES_DIR`, its CLIP embedding is added to `outputs/embeddings.pt`, and it's inserted into the FAISS index — so it becomes searchable in future queries too.
 
 Example:
 
@@ -136,7 +143,7 @@ curl "http://localhost:8000/search-image?q=a cat sitting on a chair"
 
 ## Frontend
 
-A small vanilla JS + CSS UI lives in `frontend/` for text and image search against the API. Each result card shows the image together with its similarity score.
+A small vanilla JS + CSS UI lives in `frontend/` for text and image search against the API. Each result card shows the image together with its similarity score, and opening an image lets you get a Moondream2 caption or ask a question about it.
 
 ```bash
 cd frontend
