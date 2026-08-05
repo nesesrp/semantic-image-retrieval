@@ -4,6 +4,7 @@ import time
 import io
 from contextlib import asynccontextmanager
 
+import uuid
 import torch
 import faiss
 from PIL import Image
@@ -14,6 +15,7 @@ from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
 
 from .model_loader import load_model
+from .moondream_loader import load_moondream
 
 INDEX_PATH = "outputs/faiss.index"
 EMBEDDINGS_PATH = "outputs/embeddings.pt"
@@ -27,6 +29,7 @@ async def lifespan(app: FastAPI):
     start = time.perf_counter()
 
     model, processor = load_model()
+    moondream = load_moondream()
 
     embeddings = torch.load(EMBEDDINGS_PATH)
     filenames = list(embeddings.keys())
@@ -45,6 +48,7 @@ async def lifespan(app: FastAPI):
     app.state.processor = processor
     app.state.index = index
     app.state.filenames = filenames
+    app.state.moondream = moondream
 
     print(f"Ready ({time.perf_counter() - start:.2f}s)")
 
@@ -54,6 +58,7 @@ async def lifespan(app: FastAPI):
     app.state.processor = None
     app.state.index = None
     app.state.filenames = None
+    app.state.moondream = None
 
 
 class SearchRequest(BaseModel):
@@ -96,6 +101,28 @@ def root():
 @app.get("/download/{filename}")
 def download_image(filename: str):
     return FileResponse(IMAGES_DIR / filename, filename=filename)
+
+
+@app.get("/describe/{filename}")
+def describe_image(filename: str, request: Request):
+    moondream = request.app.state.moondream
+
+    image = Image.open(IMAGES_DIR / filename).convert("RGB")
+    image.thumbnail((768, 768))
+
+    caption = moondream.caption(image, length="short")["caption"]
+    return {"caption": caption}
+
+
+@app.get("/ask/{filename}")
+def ask_image(filename: str, request: Request, q: str = Query(..., min_length=1)):
+    moondream = request.app.state.moondream
+
+    image = Image.open(IMAGES_DIR / filename).convert("RGB")
+    image.thumbnail((768, 768))
+
+    answer = moondream.query(image, q)["answer"]
+    return {"answer": answer}
 
 
 @app.post("/search", response_model=SearchResponse)

@@ -83,10 +83,20 @@ body {
 }
 
 .timing-badge {
-  margin-top: 0.5rem;
-  font-size: 0.75rem;
-  color: #6b7280;
   flex-shrink: 0;
+  white-space: nowrap;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #374151;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.timing-badge:empty {
+  display: none;
 }
 
 /* results grid */
@@ -114,8 +124,8 @@ body {
   height: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.35rem;
+  align-items: stretch;
+  gap: 0.4rem;
 }
 
 .result-img {
@@ -138,12 +148,16 @@ body {
 
 .result-score {
   flex-shrink: 0;
+  text-align: center;
+  white-space: nowrap;
   font-size: 0.75rem;
-  font-weight: 500;
+  font-weight: 600;
   color: #374151;
-  background: rgba(255, 255, 255, 0.7);
-  padding: 0.15rem 0.5rem;
-  border-radius: 1rem;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  padding: 0.3rem 0.5rem;
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* modal */
@@ -162,11 +176,53 @@ body {
   display: none;
 }
 
+.modal-content {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.75rem;
+  max-width: min(90vw, 640px);
+  max-height: 90vh;
+}
+
 .modal-img {
-  height: 85vh;
-  max-width: 85vw;
+  max-height: 60vh;
+  max-width: 100%;
+  width: auto;
+  height: auto;
   object-fit: contain;
   border-radius: 0.5rem;
+  align-self: center;
+}
+
+.modal-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+.modal-caption {
+  color: #fff;
+  font-size: 0.875rem;
+  min-height: 1.2rem;
+}
+
+.modal-ask-row {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.modal-question-input {
+  flex: 1;
+}
+
+.modal-answer {
+  color: #d1d5db;
+  font-size: 0.85rem;
+  min-height: 1.2rem;
 }
 
 .modal-close-wrap {
@@ -176,6 +232,23 @@ body {
   display: flex;
   align-items: center;
   gap: 0.5rem;
+}
+
+.modal-download-btn {
+  padding: 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  background: rgba(255, 255, 255, 0.15);
+  border: none;
+  border-radius: 9999px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.modal-download-btn:hover {
+  background: rgba(255, 255, 255, 0.3);
 }
 
 .modal-close-btn {

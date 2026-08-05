@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8">
-    <title>Flickr8k CLIP Search</title>
+    <title>Semantic Image Retrieval</title>
     <link rel="stylesheet" href="style.css">
   </head>
 <body class="page">
@@ -63,9 +63,39 @@
   </div>
 
   <div id="modal" class="modal hidden">
-    <img id="modalImg" class="modal-img">
+    <div id="modalContent" class="modal-content">
+      <img id="modalImg" class="modal-img">
+
+      <div class="modal-info">
+        <div id="modalCaption" class="modal-caption"></div>
+
+        <div class="modal-ask-row">
+          <input
+            id="modalQuestion"
+            type="text"
+            placeholder="Ask about this image..."
+            class="search-input modal-question-input"
+          >
+          <button id="modal-ask-btn" class="btn btn-primary">Ask</button>
+        </div>
+
+        <div id="modalAnswer" class="modal-answer"></div>
+      </div>
+    </div>
 
     <div class="modal-close-wrap">
+
+      <button
+        id="modal-download-btn"
+        class="modal-download-btn"
+        title="Download image"
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 3v12" />
+          <path d="M7 10l5 5 5-5" />
+          <path d="M5 21h14" />
+        </svg>
+      </button>
 
       <button
         id="modal-close-btn"
